@@ -7,17 +7,16 @@ namespace eDIPEmotiBit
     {
         private const int PORT = 12346;
 
-        public event Action<string>? OnReceive;
         private readonly UdpClient mUdpClient = new(PORT);
 
-        internal async Task LoopReceive(CancellationToken token)
+        internal async Task LoopReceive(Func<string, Task> onReceive, CancellationToken token)
         {
             try
             {
                 while (!token.IsCancellationRequested)
                 {
                     var result = await mUdpClient.ReceiveAsync(token);
-                    OnReceive?.Invoke(Encoding.ASCII.GetString(result.Buffer));
+                    await onReceive.Invoke(Encoding.ASCII.GetString(result.Buffer));
                 }
             }
             catch (OperationCanceledException)

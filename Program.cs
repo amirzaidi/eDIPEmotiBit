@@ -13,18 +13,14 @@ var console = Task.Run(async () =>
 });
 
 var emotiBit = new EmotiBit();
+emotiBit.SetPath("log");
 emotiBit.OnBatteryLow += () => Debug.Log("Battery low");
 //emotiBit.OnTimeout += () => Debug.Log("Timeout");
 //emotiBit.OnBiometricData += _ => Debug.Log($"Biometric {_}");
 
 using (var udp = new UDPListener())
 {
-    udp.OnReceive += emotiBit.OnData;
-
-    emotiBit.Start("/log");
-    await udp.LoopReceive(cts.Token);
-    emotiBit.Stop("/log");
-
+    await udp.LoopReceive(emotiBit.OnData, cts.Token);
     await console;
 }
 

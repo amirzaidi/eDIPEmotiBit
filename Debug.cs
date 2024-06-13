@@ -7,5 +7,8 @@
             var t = DateTime.UtcNow.ToString("HH:mm:ss.ffff");
             Console.WriteLine($"[{t}] {message}");
         }
+
+        internal static long Timestamp() =>
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
     }
 }
