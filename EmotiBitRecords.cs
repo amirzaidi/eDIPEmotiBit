@@ -1,21 +1,18 @@
-﻿namespace eDIPEmotiBit
+﻿using System.Text.Json;
+
+namespace eDIPEmotiBit
 {
     [Serializable]
-    internal class EmotibitRecords
+    internal class EmotiBitRecords
     {
-        public string start = "";
-        public string end = "";
-        public List<EmotiBitRecordItem> values = new List<EmotiBitRecordItem>();
+        internal string start = "";
+        internal string end = "";
+        internal List<EmotiBitRecordItem> values = [];
 
-        // Returns a JSON string representation of the record.
-        public string ToString()
-        {
-            //return JsonUtility.ToJson(this);
-            return "";
-        }
+        public override string ToString() =>
+            JsonSerializer.Serialize(this);
 
-        // Clears the records.
-        public void Clear()
+        internal void Clear()
         {
             start = "";
             end = "";

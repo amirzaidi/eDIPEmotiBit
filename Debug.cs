@@ -4,7 +4,8 @@
     {
         internal static void Log(string message)
         {
-            Console.WriteLine(message);
+            var t = DateTime.Now.ToString("HH:mm:ss - ");
+            Console.WriteLine($"{t} {message}");
         }
     }
 }

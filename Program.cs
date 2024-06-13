@@ -1,5 +1,4 @@
-﻿// See https://aka.ms/new-console-template for more information
-using eDIPEmotiBit;
+﻿using eDIPEmotiBit;
 
 Console.WriteLine("Hello, World!");
 
@@ -13,9 +12,21 @@ var console = Task.Run(async () =>
     await cts.CancelAsync();
 });
 
+var emotiBit = new EmotiBit
+{
+    onBatteryLevelLow = () => Debug.Log("Low battery"),
+    onDataTimeoutReceived = () => Debug.Log("Timeout data"),
+    onBiometricDataReceived = _ => Debug.Log($"Biometric {_}"),
+};
+
 using (var udp = new UDPListener())
 {
+    udp.OnReceive += emotiBit.OnNewData;
+
+    emotiBit.Start("/log");
     await udp.LoopReceive(cts.Token);
+    emotiBit.Stop("/log");
+
     await console;
 }
 
