@@ -34,9 +34,6 @@
         ];
 
         public event Action? OnBatteryLow;
-        public event Action? OnTimeout;
-        public event Action<string>? OnBiometricData;
-
         private int mBatteryLevel = 100;
 
         public void SetPath(string path)
@@ -93,10 +90,6 @@
                     if (fields.Any(_ => tagList.Tags.Contains(_)))
                     {
                         await File.AppendAllLinesAsync(tagList.Path!, [$"{Debug.Timestamp()},{data}"]);
-                        if (tagList.Name == mTagLists[0].Name)
-                        {
-                            OnBiometricData?.Invoke(data);
-                        }
                     }
                 }
             }
