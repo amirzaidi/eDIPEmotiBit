@@ -89,7 +89,14 @@
                 {
                     if (fields.Any(_ => tagList.Tags.Contains(_)))
                     {
-                        await File.AppendAllLinesAsync(tagList.Path!, [$"{Debug.Timestamp()},{data}"]);
+                        try
+                        {
+                            await File.AppendAllLinesAsync(tagList.Path!, [$"{Debug.Timestamp()},{data}"]);
+                        }
+                        catch (IOException)
+                        {
+                            Debug.Log($"Cannot access {tagList.Path!}");
+                        }
                     }
                 }
             }
