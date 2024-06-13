@@ -66,12 +66,12 @@ public class Emotibit /* : MonoBehaviour */
     private int lowBatteryLevel = 7;
     private bool bBatteryLow = false;
     private int batteryLevel = 100;
-    private ClienteUDP myUDPClient;
+    private UDPListener myUDPClient;
 
     void Start()
     {
-        myUDPClient = new ClienteUDP();
-        myUDPClient.onDataReceived = OnNewData;
+        myUDPClient = new UDPListener();
+        myUDPClient.OnReceive += OnNewData;
     }
 
     private void Awake()
