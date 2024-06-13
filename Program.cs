@@ -12,16 +12,14 @@ var console = Task.Run(async () =>
     await cts.CancelAsync();
 });
 
-var emotiBit = new EmotiBit
-{
-    onBatteryLevelLow = () => Debug.Log("Low battery"),
-    onDataTimeoutReceived = () => Debug.Log("Timeout data"),
-    onBiometricDataReceived = _ => Debug.Log($"Biometric {_}"),
-};
+var emotiBit = new EmotiBit();
+emotiBit.OnBatteryLow += () => Debug.Log("Battery low");
+//emotiBit.OnTimeout += () => Debug.Log("Timeout");
+//emotiBit.OnBiometricData += _ => Debug.Log($"Biometric {_}");
 
 using (var udp = new UDPListener())
 {
-    udp.OnReceive += emotiBit.OnNewData;
+    udp.OnReceive += emotiBit.OnData;
 
     emotiBit.Start("/log");
     await udp.LoopReceive(cts.Token);

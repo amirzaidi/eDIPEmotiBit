@@ -1,35 +1,59 @@
-﻿namespace eDIPEmotiBit
+﻿using System.Text.Json;
+
+namespace eDIPEmotiBit
 {
     internal class EmotiBit
     {
-        private static readonly string[] TAGS_BIOMETRIC = ["EA", "EL", "ER", "PI", "PR", "PG", "T0", "TH", "AX", "AY", "AZ", "GX", "GY", "GZ", "MX", "MY", "MZ", "SA", "SR", "SF", "HR", "BI", "H0"];
-        private static readonly string[] TAGS_GENERAL = ["EI", "DC", "DO", "B%", "BV", "D%", "RD", "PI", "PO", "RS"];
-        private static readonly string[] TAGS_COMPUTER = ["GL", "GS", "GB", "GA", "TL", "TU", "TX", "LM", "RB", "RE", "UN", "MH", "HE"];
+        private const int LOW_BATTERY_LEVEL = 7;
+        private const float TIMEOUT_SECONDS = 3f;
 
-        public readonly EmotiBitRecords mRecordBiometric = new();
-        public readonly EmotiBitRecords mRecordGeneral = new();
-        public readonly EmotiBitRecords mRecordTags = new();
+        private static readonly JsonSerializerOptions JSON_OPTIONS = new()
+        {
+            WriteIndented = true,
+        };
+
+        internal readonly struct TagList
+        {
+            internal readonly string Name;
+            internal readonly string[] Tags;
+            internal readonly EmotiBitRecords Records;
+
+            internal TagList(string name, string[] tags)
+            {
+                Name = name;
+                Tags = tags;
+                Records = new();
+            }
+        }
+
+        private readonly TagList[] mTagLists = [
+            new(
+                "Biometric",
+                ["EA", "EL", "ER", "PI", "PR", "PG", "T0", "TH", "AX", "AY", "AZ", "GX", "GY", "GZ", "MX", "MY", "MZ", "SA", "SR", "SF", "HR", "BI", "H0"]
+            ),
+            new(
+                "General",
+                ["EI", "DC", "DO", "B%", "BV", "D%", "RD", "PI", "PO", "RS"]
+            ),
+            new(
+                "Computer",
+                ["GL", "GS", "GB", "GA", "TL", "TU", "TX", "LM", "RB", "RE", "UN", "MH", "HE"]
+            ),
+        ];
 
         public bool isRecording = false;
         public bool isDebugMode = true;
 
-        public float dataTimeout = 3f;
-        public bool isReady = true;
+        public event Action? OnBatteryLow;
+        public event Action? OnTimeout;
+        public event Action<string>? OnBiometricData;
 
-        public Action onBatteryLevelLow;
-        public Action onDataTimeoutReceived;
-        public Action<string> onBiometricDataReceived;
-
-        private float lastDataTime = 0;
         private bool isDataTimeout = false;
-        private int lowBatteryLevel = 7;
-        private bool bBatteryLow = false;
-        private int batteryLevel = 100;
-        private UDPListener myUDPClient;
+        private float lastDataTime = 0;
 
-        string toDebugLog = null;
+        private int mBatteryLevel = 100;
 
-        internal void OnNewData(string data)
+        internal void OnData(string data)
         {
             lastDataTime = 0;
             isDataTimeout = false;
@@ -43,76 +67,59 @@
             {
                 try
                 {
-                    EmotiBitRecordItem recordItem = new EmotiBitRecordItem(data);
-
+                    var recordItem = new EmotiBitRecordItem(data);
                     if (data.Contains("B%"))
                     {
                         string[] fields = data.Split(',');
                         if (fields.Length == 7)
                         {
-                            bool successfullyParsed = int.TryParse(fields[6], out batteryLevel);
-                            if (successfullyParsed)
+                            if (int.TryParse(fields[6], out mBatteryLevel))
                             {
-                                if (batteryLevel < lowBatteryLevel)
+                                if (mBatteryLevel < LOW_BATTERY_LEVEL)
                                 {
-                                    bBatteryLow = true;
                                     Debug.Log("Emotibit Battery Low!");
+                                    OnBatteryLow?.Invoke();
                                 }
                             }
                         }
                     }
 
-                    foreach (string tag in TAGS_BIOMETRIC)
+                    foreach (var tagList in mTagLists)
                     {
-                        if (recordItem.value.Contains(tag))
+                        foreach (var tag in tagList.Tags)
                         {
-                            mRecordBiometric.values.Add(recordItem);
-                            recordItemToSend = recordItem;
-                            return;
-                        }
-                    }
-
-                    foreach (string tag in TAGS_GENERAL)
-                    {
-                        if (recordItem.value.Contains(tag))
-                        {
-                            mRecordGeneral.values.Add(recordItem);
-                            return;
-                        }
-                    }
-
-                    foreach (string tag in TAGS_COMPUTER)
-                    {
-                        if (recordItem.value.Contains(tag))
-                        {
-                            mRecordTags.values.Add(recordItem);
-                            return;
+                            if (recordItem.value.Contains(tag))
+                            {
+                                tagList.Records.values.Add(recordItem);
+                                if (tagList.Name == mTagLists[0].Name)
+                                {
+                                    OnBiometricData?.Invoke(recordItem.value);
+                                }
+                                return;
+                            }
                         }
                     }
                 }
                 catch (Exception ex)
                 {
                     Debug.Log($"Error: {ex.Message}");
+                    throw;
                 }
             }
         }
 
         public void Start(string filePath)
         {
-
-            if (isRecording) return;
-            else
+            if (!isRecording)
             {
                 if (!isDataTimeout)
                 {
-                    mRecordBiometric.Clear();
-                    mRecordGeneral.Clear();
-                    mRecordTags.Clear();
-
-                    string currentTime = System.DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
-                    mRecordBiometric.start = currentTime;
-                    mRecordGeneral.start = currentTime;
-                    mRecordTags.start = currentTime;
+                    string currentTime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
+                    foreach (var tagList in mTagLists)
+                    {
+                        tagList.Records.Clear();
+                        tagList.Records.start = currentTime;
+                    }
 
                     isRecording = true;
                 }
@@ -126,62 +133,28 @@
         public void Stop(string filePath)
         {
             Debug.Log(Directory.GetCurrentDirectory());
-
-            if (!isRecording) return;
+            if (!isRecording)
+            {
+                return;
+            }
 
             isRecording = false;
 
-            string currentTime = System.DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
-            mRecordBiometric.end = currentTime;
-            mRecordGeneral.end = currentTime;
-            mRecordTags.end = currentTime;
-
-            if (mRecordBiometric.start.Length > 0)
+            string currentTime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
+            foreach (var tagList in mTagLists)
             {
-                if (filePath != null)
-                {
-                    string path = Directory.GetCurrentDirectory() + filePath + "/emotibit_biometric_data.json";
-                    path = GetSafeFileName(path);
+                tagList.Records.end = currentTime;
 
+                if (tagList.Records.start.Length > 0 && filePath != null)
+                {
+                    string path = Directory.GetCurrentDirectory() + filePath + $"/emotibit_{tagList.Name.ToLower()}_data.json";
+                    path = GetSafeFileName(path);
                     if (IsValidPath(path))
                     {
-                        new FileInfo(path).Directory.Create();
+                        new FileInfo(path).Directory!.Create();
                         StreamWriter writer = File.CreateText(path);
-                        writer.WriteLine(mRecordBiometric.ToString());
-                        writer.Close();
-                    }
-                }
-            }
-
-            if (mRecordGeneral.start.Length > 0)
-            {
-                if (filePath != null)
-                {
-                    string path = Directory.GetCurrentDirectory() + filePath + "/emotibit_general_data.json";
-                    path = GetSafeFileName(path);
-
-                    if (IsValidPath(path))
-                    {
-                        new FileInfo(path).Directory.Create();
-                        StreamWriter writer = File.CreateText(path);
-                        writer.WriteLine(mRecordGeneral.ToString());
-                        writer.Close();
-                    }
-                }
-            }
-
-            if (mRecordTags.start.Length > 0)
-            {
-                if (filePath != null)
-                {
-                    string path = Directory.GetCurrentDirectory() + filePath + "/emotibit_computer_data.json";
-                    path = GetSafeFileName(path);
-
-                    if (IsValidPath(path))
-                    {
-                        new FileInfo(path).Directory.Create();
-                        StreamWriter writer = File.CreateText(path);
-                        writer.WriteLine(mRecordTags.ToString());
+                        var r = tagList.Records.ToJson(JSON_OPTIONS);
+                        writer.WriteLine(r);
                         writer.Close();
                     }
                 }
@@ -190,7 +163,6 @@
 
         public string GetSafeFileName(string Path)
         {
-
             string tmp_path_completado = Path;
 
             int c = 1;
@@ -205,41 +177,22 @@
             }
 
             return tmp_path_completado;
-
         }
 
-
-        private void OnApplicationQuit()
-        {
-
-        }
 
         // Validates the given path to ensure it is a usable file path.
-        public bool IsValidPath(string path)
-        {
-            bool isValid = !string.IsNullOrEmpty(path) && path.Length > 2 && path.IndexOfAny(Path.GetInvalidPathChars()) < 0;
-            return isValid;
-        }
+        public static bool IsValidPath(string path) =>
+            !string.IsNullOrEmpty(path)
+            && path.Length > 2
+            && path.IndexOfAny(Path.GetInvalidPathChars()) < 0;
 
 
+        /*
         EmotiBitRecordItem recordItemToSend = null;
         void Update()
         {
-            if (recordItemToSend != null)
-            {
-                onBiometricDataReceived?.Invoke(recordItemToSend.value);
-                recordItemToSend = null;
-            }
-
-            if (bBatteryLow)
-            {
-                onBatteryLevelLow?.Invoke();
-                bBatteryLow = false;
-            }
-
             if (!isDataTimeout)
             {
-                /*
                 lastDataTime += Time.deltaTime;
                 if (lastDataTime > dataTimeout)
                 {
@@ -247,10 +200,10 @@
                     onDataTimeoutReceived?.Invoke();
                     Debug.Log("Emotibit Data Timeout!");
                 }
-                */
             }
 
             isReady = !isDataTimeout;
         }
+        */
     }
 }

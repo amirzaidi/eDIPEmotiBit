@@ -1,16 +1,22 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace eDIPEmotiBit
 {
     [Serializable]
-    internal class EmotiBitRecords
+    public class EmotiBitRecords
     {
-        internal string start = "";
-        internal string end = "";
-        internal List<EmotiBitRecordItem> values = [];
+        [JsonInclude]
+        public string start = "";
 
-        public override string ToString() =>
-            JsonSerializer.Serialize(this);
+        [JsonInclude]
+        public string end = "";
+
+        [JsonInclude]
+        public List<EmotiBitRecordItem> values = [];
+
+        public string ToJson(JsonSerializerOptions? options = null) =>
+            JsonSerializer.Serialize(this, options);
 
         internal void Clear()
         {
