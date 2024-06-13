@@ -1,4 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
+using eDIPEmotiBit;
+
 Console.WriteLine("Hello, World!");
 
 var cts = new CancellationTokenSource();

@@ -1,47 +1,6 @@
 ﻿using eDIPEmotiBit;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
 
-[Serializable]
-public class EmotibitRecordItem
-{
-    public string time;
-    public string value;
-
-    // Constructor that initializes a new record item with a value.
-    public EmotibitRecordItem(string _value)
-    {
-        time = System.DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
-        value = _value;
-    }
-}
-
-[Serializable]
-public class EmotibitRecords
-{
-    public string start = "";
-    public string end = "";
-    public List<EmotibitRecordItem> values = new List<EmotibitRecordItem>();
-
-    // Returns a JSON string representation of the record.
-    public string ToString()
-    {
-        //return JsonUtility.ToJson(this);
-        return "";
-    }
-
-    // Clears the records.
-    public void Clear()
-    {
-        start = "";
-        end = "";
-        values.Clear();
-    }
-}
-
-public class Emotibit /* : MonoBehaviour */
+internal class Emotibit
 {
     string[] biometricTags = new string[] { "EA", "EL", "ER", "PI", "PR", "PG", "T0", "TH", "AX", "AY", "AZ", "GX", "GY", "GZ", "MX", "MY", "MZ", "SA", "SR", "SF", "HR", "BI", "H0" };
     string[] generalTags = new string[] { "EI", "DC", "DO", "B%", "BV", "D%", "RD", "PI", "PO", "RS" };
@@ -93,7 +52,7 @@ public class Emotibit /* : MonoBehaviour */
         if (isRecording)
         {
             try {
-                    EmotibitRecordItem recordItem = new EmotibitRecordItem(data);
+                    EmotiBitRecordItem recordItem = new EmotiBitRecordItem(data);
 
                     if (data.Contains("B%"))
                     {
@@ -274,7 +233,7 @@ public class Emotibit /* : MonoBehaviour */
     }
 
 
-    EmotibitRecordItem recordItemToSend = null;
+    EmotiBitRecordItem recordItemToSend = null;
     void Update()
     {
         if (recordItemToSend != null) {
