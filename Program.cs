@@ -1,7 +1,5 @@
 ﻿using eDIPEmotiBit;
 
-Console.WriteLine("Hello, World!");
-
 var cts = new CancellationTokenSource();
 var console = Task.Run(async () =>
 {
@@ -23,5 +21,3 @@ using (var udp = new UDPListener())
     await udp.LoopReceive(emotiBit.OnData, cts.Token);
     await console;
 }
-
-Console.WriteLine("Goodbye, World!");
