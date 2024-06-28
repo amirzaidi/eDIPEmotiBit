@@ -18,18 +18,23 @@
             }
         }
 
+        // List of tags: https://github.com/EmotiBit/EmotiBit_XPlat_Utils/blob/8f22129740f9ea37c476b05e8007cea91755d6e2/src/EmotiBitPacket.cpp
         private readonly TagList[] mTagLists = [
             new(
                 "Biometric",
-                ["EA", "EL", "ER", "PI", "PR", "PG", "T0", "TH", "AX", "AY", "AZ", "GX", "GY", "GZ", "MX", "MY", "MZ", "SA", "SR", "SF", "HR", "BI", "H0"]
+                ["EA", "EL", "ER", "PI", "PR", "PG", "O2", "T0", "T1", "TH", "H0", "AX", "AY", "AZ", "GX", "GY", "GZ", "MX", "MY", "MZ", "HR", "BI", "SA", "SF", "SR"]
             ),
             new(
                 "General",
-                ["EI", "DC", "DO", "B%", "BV", "D%", "RD", "PI", "PO", "RS"]
+                ["BV", "B%", "DC", "DO", "AK", "NK", "EM", "EI", "RD", "PN", "PO", "RS"]
             ),
             new(
                 "Computer",
                 ["GL", "GS", "GB", "GA", "TL", "TU", "TX", "LM", "RB", "RE", "UN", "MH", "HE"]
+            ),
+            new(
+                "Unknown",
+                []
             ),
         ];
 
@@ -85,25 +90,41 @@
                     }
                 }
 
+                var writes = 0;
                 foreach (var tagList in mTagLists)
                 {
-                    if (fields.Any(_ => tagList.Tags.Contains(_)))
+                    if (fields.Take(4).Any(_ => tagList.Tags.Contains(_)))
                     {
-                        try
-                        {
-                            await File.AppendAllLinesAsync(tagList.Path!, [$"{Debug.Timestamp()},{data}"]);
-                        }
-                        catch (IOException)
-                        {
-                            Debug.Log($"Cannot access {tagList.Path!}");
-                        }
+                        writes += 1;
+                        await Write(tagList.Path!, data);
                     }
+                }
+
+                if (writes == 0)
+                {
+                    await Write(mTagLists.Last().Path!, data);
+                }
+                else if (writes > 1)
+                {
+                    Debug.Log($"Writes {writes} {data}");
                 }
             }
             catch (Exception ex)
             {
                 Debug.Log($"Error: {ex.Message}");
                 throw;
+            }
+        }
+
+        private async Task Write(string path, string data)
+        {
+            try
+            {
+                await File.AppendAllLinesAsync(path, [$"{Debug.Timestamp()},{data}"]);
+            }
+            catch (IOException)
+            {
+                Debug.Log($"Cannot access {path}");
             }
         }
 

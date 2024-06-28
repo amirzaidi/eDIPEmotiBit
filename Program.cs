@@ -1,5 +1,6 @@
 ﻿using eDIPEmotiBit;
 
+Debug.Log("Press Q to exit");
 var cts = new CancellationTokenSource();
 var console = Task.Run(async () =>
 {
@@ -16,6 +17,7 @@ emotiBit.OnBatteryLow += () => Debug.Log("Battery low");
 
 using (var udp = new UDPListener())
 {
+    Debug.Log("Starting listener");
     await udp.LoopReceive(emotiBit.OnData, cts.Token);
     await console;
 }
